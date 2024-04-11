@@ -1,0 +1,34 @@
+Type: AWS::IAM::Role
+Properties:
+  RoleName: !Sub "${ResourcePrefix}${MultiAccountRoleName}"
+  AssumeRolePolicyDocument:
+    Statement:
+      - Action: 
+          - sts:AssumeRole
+        Effect: Allow
+        Principal:
+          AWS:
+            # Check if DevDataCollectionAccountId is a single ID or a list
+            # If it's a single ID, use it directly
+            # If it's a list, iterate over each account ID
+            # and construct the ARN accordingly
+            {% if DevDataCollectionAccountId | length == 1 %}
+            - !Sub "arn:aws:iam::${DevDataCollectionAccountId[0]}:root"
+            {% else %}
+            {% for accountId in DevDataCollectionAccountId %}
+            - !Sub "arn:aws:iam::${accountId}:root"
+            {% endfor %}
+            {% endif %}
+        Condition:
+          ForAnyValue: ArnEquals:
+            aws:PrincipalArn:
+              # Check if DevDataCollectionAccountId is a single ID or a list
+              # If it's a single ID, construct the ARN for that ID
+              # If it's a list, construct the ARN for each account ID
+              {% if DevDataCollectionAccountId | length == 1 %}
+              - !Sub "arn:aws:iam::${DevDataCollectionAccountId[0]}:role/${ResourcePrefix}budgets-LambdaRole"
+              {% else %}
+              {% for accountId in DevDataCollectionAccountId %}
+              - !Sub "arn:aws:iam::${accountId}:role/${ResourcePrefix}budgets-LambdaRole"
+              {% endfor %}
+              {% endif %}
