@@ -6,8 +6,7 @@ Metadata:
     - Label:
         default: 'Deployment parameters'
       Parameters:
-        - DataCollectionAccountID
-        - DataCollectionAccontID2
+        - PrdPrdDataCollectionAccountID
         - ResourcePrefix
         - MultiAccountRoleName
     - Label:
@@ -20,9 +19,7 @@ Metadata:
         - IncludeTAModule
         - IncludeTransitGatewayModule
     ParameterLabels:
-      DataCollectionAccountID:
-        default: 'Data Collection Account ID'
-      DataCollectionAccountID2:
+      PrdPrdDataCollectionAccountID:
         default: 'Data Collection Account ID'
       MultiAccountRoleName:
         default: 'Multi Account Role Name'
@@ -41,10 +38,7 @@ Metadata:
       IncludeTransitGatewayModule:
         default: 'Include Transit Gateway Module'
 Parameters:
-  DataCollectionAccountID:
-    Type: String
-    Description: AccountId of where the collector is deployed
-  DataCollectionAccountID2:
+  PrdPrdDataCollectionAccountID:
     Type: String
     Description: AccountId of where the collector is deployed
   MultiAccountRoleName:
@@ -54,7 +48,7 @@ Parameters:
   ResourcePrefix:
     Type: String
     Description: This prefix will be placed in front of all roles created. Note you may wish to add a dash at the end to make more readable e.g. prefix-
-    Default: "CID-DC-"
+    Default: "CID-DC-PRD"
   IncludeTAModule:
     Type: String
     Description: Collects AWS Trusted Advisor recommendations data
@@ -128,23 +122,16 @@ Resources:
             Effect: Allow
             Principal:
               AWS:
-                - !Sub "arn:aws:iam::${DataCollectionAccountID}:root"
-                - !Sub "arn:aws:iam::${DataCollectionAccountID2}:root"
+                - !Sub "arn:aws:iam::${PrdDataCollectionAccountID}:root"
             Condition:
               ForAnyValue:ArnEquals:
                 aws:PrincipalArn:
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID}:role/${ResourcePrefix}budgets-LambdaRole"
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID}:role/${ResourcePrefix}ecs-chargeback-LambdaRole"
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID}:role/${ResourcePrefix}inventory-LambdaRole"
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID}:role/${ResourcePrefix}rds-usage-LambdaRole"
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID}:role/${ResourcePrefix}transit-gateway-LambdaRole"
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID}:role/${ResourcePrefix}trusted-advisor-LambdaRole"
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID2}:role/${ResourcePrefix}budgets-LambdaRole"
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID2}:role/${ResourcePrefix}ecs-chargeback-LambdaRole"
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID2}:role/${ResourcePrefix}inventory-LambdaRole"
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID2}:role/${ResourcePrefix}rds-usage-LambdaRole"
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID2}:role/${ResourcePrefix}transit-gateway-LambdaRole"
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID2}:role/${ResourcePrefix}trusted-advisor-LambdaRole"
+                  - !Sub "arn:aws:iam::${PrdDataCollectionAccountID}:role/${ResourcePrefix}budgets-LambdaRole"
+                  - !Sub "arn:aws:iam::${PrdDataCollectionAccountID}:role/${ResourcePrefix}ecs-chargeback-LambdaRole"
+                  - !Sub "arn:aws:iam::${PrdDataCollectionAccountID}:role/${ResourcePrefix}inventory-LambdaRole"
+                  - !Sub "arn:aws:iam::${PrdDataCollectionAccountID}:role/${ResourcePrefix}rds-usage-LambdaRole"
+                  - !Sub "arn:aws:iam::${PrdDataCollectionAccountID}:role/${ResourcePrefix}transit-gateway-LambdaRole"
+                  - !Sub "arn:aws:iam::${PrdDataCollectionAccountID}:role/${ResourcePrefix}trusted-advisor-LambdaRole"
       Path: /
     Metadata:
       cfn_nag:
@@ -155,7 +142,7 @@ Resources:
     Type: 'AWS::IAM::Policy'
     Condition: IncludeTAModulePolicy
     Properties:
-      PolicyName: TAPolicy
+      PolicyName: TAPolicyPrd
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -175,7 +162,7 @@ Resources:
     Type: 'AWS::IAM::Policy'
     Condition: IncludeBudgetsModulePolicy
     Properties:
-      PolicyName: BudgetsReadOnlyPolicy
+      PolicyName: BudgetsReadOnlyPolicyPrd
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -190,7 +177,7 @@ Resources:
     Type: 'AWS::IAM::Policy'
     Condition: IncludeInventoryCollectorModulePolicy
     Properties:
-      PolicyName: InventoryCollectorPolicy
+      PolicyName: InventoryCollectorPolicyPrd
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -220,7 +207,7 @@ Resources:
     Type: 'AWS::IAM::Policy'
     Condition: IncludeECSChargebackModulePolicy
     Properties:
-      PolicyName: ECSChargebackPolicy
+      PolicyName: ECSChargebackPolicyPrd
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -242,7 +229,7 @@ Resources:
     Type: 'AWS::IAM::Policy'
     Condition: IncludeRDSUtilizationModulePolicy
     Properties:
-      PolicyName: RDSUtilizationPolicy
+      PolicyName: RDSUtilizationPolicyPrd
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -266,7 +253,7 @@ Resources:
     Type: 'AWS::IAM::Policy'
     Condition: IncludeTransitGatewayModulePolicy
     Properties:
-      PolicyName: TransitGatewayPolicy
+      PolicyName: TransitGatewayPolicyPrd
       PolicyDocument:
         Version: "2012-10-17"
         Statement:

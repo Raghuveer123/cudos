@@ -6,7 +6,6 @@ Metadata:
       - Label:
           default: "Deployment parameters"
         Parameters:
-          - DevCollectionAccountID
           - PrdCollectionAccountID
           - ManagementAccountRole
           - ResourcePrefix
@@ -21,10 +20,8 @@ Metadata:
     ParameterLabels:
       ManagementAccountRole:
         default: "Management account role"
-      DataCollectionAccountID:
+      PrdCollectionAccountID:
         default: "Data Collection Account Id"
-      DataCollectionAccountID2:
-        default: "Data Collection Account Id2"
       ResourcePrefix:
         default: "Role Prefix"
       IncludeComputeOptimizerModule:
@@ -38,9 +35,6 @@ Metadata:
       IncludeCostOptimizationHubModule:
         default: "Include EnableCostOptimizationHub Module"
 Parameters:
-  DevDataCollectionAccountID:
-    Type: String
-    Description: AccountId of where the collector is deployed
   PrdDataCollectionAccountID:
     Type: String
     Description: AccountId of where the collector is deployed
@@ -51,7 +45,7 @@ Parameters:
   ResourcePrefix:
     Type: String
     Description: This prefix will be placed in front of all roles created. Note you may wish to add a dash at the end to make more readable e.g. prefix-
-    Default: "CID-DC-"
+    Default: "CID-DC-Prd"
   IncludeComputeOptimizerModule:
     Type: String
     Description: Collects AWS Compute Optimizer service recommendations
@@ -107,25 +101,17 @@ Resources:
             Effect: Allow
             Principal:
               AWS:
-                - !Sub "arn:aws:iam::${DevDataCollectionAccountID}:root"
-                - !Sub "arn:aws:iam::${PrdDataCollectionAccountID2}:root"
+                - !Sub "arn:aws:iam::${PrdDataCollectionAccountID}:root"
             Condition:
               ForAnyValue:ArnEquals:
                 aws:PrincipalArn:
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID}:role/${ResourcePrefix}account-collector-LambdaRole"
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID}:role/${ResourcePrefix}organizations-LambdaRole"
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID}:role/${ResourcePrefix}compute-optimizer-LambdaRole"
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID}:role/${ResourcePrefix}cost-anomaly-LambdaRole"
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID}:role/${ResourcePrefix}cost-explorer-rightsizing-LambdaRole"
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID}:role/${ResourcePrefix}cost-optimization-hub-LambdaRole"
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID}:role/${ResourcePrefix}backup-LambdaRole"
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID2}:role/${ResourcePrefix}account-collector-LambdaRole"
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID2}:role/${ResourcePrefix}organizations-LambdaRole"
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID2}:role/${ResourcePrefix}compute-optimizer-LambdaRole"
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID2}:role/${ResourcePrefix}cost-anomaly-LambdaRole"
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID2}:role/${ResourcePrefix}cost-explorer-rightsizing-LambdaRole"
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID2}:role/${ResourcePrefix}cost-optimization-hub-LambdaRole"
-                  - !Sub "arn:aws:iam::${DataCollectionAccountID2}:role/${ResourcePrefix}backup-LambdaRole"
+                  - !Sub "arn:aws:iam::${PrdDataCollectionAccountID}:role/${ResourcePrefix}account-collector-LambdaRole"
+                  - !Sub "arn:aws:iam::${PrdDataCollectionAccountID}:role/${ResourcePrefix}organizations-LambdaRole"
+                  - !Sub "arn:aws:iam::${PrdDataCollectionAccountID}:role/${ResourcePrefix}compute-optimizer-LambdaRole"
+                  - !Sub "arn:aws:iam::${PrdDataCollectionAccountID}:role/${ResourcePrefix}cost-anomaly-LambdaRole"
+                  - !Sub "arn:aws:iam::${PrdDataCollectionAccountID}:role/${ResourcePrefix}cost-explorer-rightsizing-LambdaRole"
+                  - !Sub "arn:aws:iam::${PrdDataCollectionAccountID}:role/${ResourcePrefix}cost-optimization-hub-LambdaRole"
+                  - !Sub "arn:aws:iam::${PrdDataCollectionAccountID}:role/${ResourcePrefix}backup-LambdaRole"
       Path: /
     Metadata:
       cfn_nag:
@@ -138,7 +124,7 @@ Resources:
     Type: "AWS::IAM::Policy"
     #Condition: IsAnyModuleEnabled
     Properties:
-      PolicyName: Management-Account-permissions
+      PolicyName: Management-Account-permissions-prd
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -167,7 +153,7 @@ Resources:
     Type: "AWS::IAM::Policy"
     Condition: EnableRightsizingModule
     Properties:
-      PolicyName: RightsizingRecommendationsPolicy
+      PolicyName: RightsizingRecommendationsPolicyPrd
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -186,7 +172,7 @@ Resources:
     Type: "AWS::IAM::Policy"
     Condition: EnableCostAnomaliesModule
     Properties:
-      PolicyName: CostAnomaliesPolicy
+      PolicyName: CostAnomaliesPolicyPrd
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -205,7 +191,7 @@ Resources:
     Type: "AWS::IAM::Policy"
     Condition: EnableBackupModule
     Properties:
-      PolicyName: BackupEventsPolicy
+      PolicyName: BackupEventsPolicyPrd
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -229,7 +215,7 @@ Resources:
     Type: "AWS::IAM::Policy"
     Condition: EnableComputeOptimizerModule
     Properties:
-      PolicyName: ComputeOptimizer-ExportLambdaFunctionRecommendations
+      PolicyName: ComputeOptimizer-ExportLambdaFunctionRecommendations-Prd
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -251,7 +237,7 @@ Resources:
     Type: "AWS::IAM::Policy"
     Condition: EnableComputeOptimizerModule
     Properties:
-      PolicyName: ComputeOptimizer-ExportAutoScalingGroupRecommendations
+      PolicyName: ComputeOptimizer-ExportAutoScalingGroupRecommendations-Prd
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -272,7 +258,7 @@ Resources:
     Type: "AWS::IAM::Policy"
     Condition: EnableComputeOptimizerModule
     Properties:
-      PolicyName: ComputeOptimizer-ExportEBSVolumeRecommendations
+      PolicyName: ComputeOptimizer-ExportEBSVolumeRecommendations-Prd
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -293,7 +279,7 @@ Resources:
     Type: "AWS::IAM::Policy"
     Condition: EnableComputeOptimizerModule
     Properties:
-      PolicyName: ComputeOptimizer-ExportEC2InstanceRecommendations
+      PolicyName: ComputeOptimizer-ExportEC2InstanceRecommendations-Prd
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -314,7 +300,7 @@ Resources:
     Type: "AWS::IAM::Policy"
     Condition: EnableComputeOptimizerModule
     Properties:
-      PolicyName: ComputeOptimizer-ExportECSRecommendations
+      PolicyName: ComputeOptimizer-ExportECSRecommendations-Prd
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -337,7 +323,7 @@ Resources:
     Type: "AWS::IAM::Policy"
     Condition: EnableComputeOptimizerModule
     Properties:
-      PolicyName: ComputeOptimizer-ExportLicenseRecommendations
+      PolicyName: ComputeOptimizer-ExportLicenseRecommendations-Prd
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -358,7 +344,7 @@ Resources:
     Type: "AWS::IAM::Policy"
     Condition: EnableCostOptimizationHubModule
     Properties:
-      PolicyName: CostOptimizationHubRecommendations
+      PolicyName: CostOptimizationHubRecommendationsPrd
       PolicyDocument:
         Version: "2012-10-17"
         Statement:

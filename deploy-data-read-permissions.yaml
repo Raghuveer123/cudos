@@ -6,8 +6,6 @@ Metadata:
       - Label:
           default: "Deployment parameters"
         Parameters:
-          - DevDataCollectionAccountID
-          - PrdDataCollectionAccountID
           - ResourcePrefix
           - ManagementAccountRole
           - MultiAccountRoleName
@@ -28,6 +26,11 @@ Metadata:
           - IncludeRightsizingModule
           - IncludeTAModule
           - IncludeTransitGatewayModule
+      - Label:
+          default: "Data Collection AWS Accounts"
+        Parameters:
+          - DevDataCollectionAccountID
+          - PrdDataCollectionAccountID
     ParameterLabels:
       ManagementAccountRole:
         default: "Management account role"
@@ -169,15 +172,17 @@ Parameters:
 
 Conditions:
   DeployModuleReadInMgmt: !Equals [!Ref AllowModuleReadInMgmt, "yes"]
+  OnlyDevDataCollectionAccountId: !Equals [!Ref DevDataCollectionAccountId, "1234567890"]
+  OnlyPrdDataCollectionAccountId: !Equals [!Ref PrdDataCollectionAccountId, "4567890123"]
 
 Resources:
-  DataCollectorMgmtAccountReadStack:
+  DataCollectorMgmtAccountReadStackDev:
     Type: AWS::CloudFormation::Stack
+    Condition: OnlyDevDataCollectionAccountId
     Properties:
-      TemplateURL: !Sub "https://aws-managed-cost-intelligence-dashboards.s3.amazonaws.com/cfn/data-collection/deploy-in-management-account.yaml"
+      TemplateURL: !Sub "https://aws-managed-cost-intelligence-dashboards.s3.amazonaws.com/cfn/data-collection/deploy-in-management-account-dev.yaml"
       Parameters:
         DevDataCollectionAccountID: !Ref DevDataCollectionAccountID
-        PrdDataCollectionAccountID: !Ref ProdDataCollectionAccontID
         ManagementAccountRole: !Ref ManagementAccountRole
         ResourcePrefix: !Ref ResourcePrefix
         IncludeComputeOptimizerModule: !Ref IncludeComputeOptimizerModule
@@ -185,14 +190,15 @@ Resources:
         IncludeRightsizingModule: !Ref IncludeRightsizingModule
         IncludeBackupModule: !Ref IncludeBackupModule
         IncludeCostOptimizationHubModule: !Ref IncludeCostOptimizationHubModule
-  DataCollectorMgmtAccountModulesReadStack:
+  DataCollectorMgmtAccountModulesReadStackDev:
     Type: AWS::CloudFormation::Stack
-    Condition: DeployModuleReadInMgmt
+    Condition: !And 
+      - !Condition DeployModuleReadInMgmt
+      - !Condition OnlyDevDataCollectionAccountId
     Properties:
-      TemplateURL: !Sub "https://aws-managed-cost-intelligence-dashboards.s3.amazonaws.com/cfn/data-collection/deploy-in-linked-account.yaml"
+      TemplateURL: !Sub "https://aws-managed-cost-intelligence-dashboards.s3.amazonaws.com/cfn/data-collection/deploy-in-linked-account-dev.yaml"
       Parameters:
         DevDataCollectionAccountID: !Ref DevDataCollectionAccountID
-        PrdDataCollectionAccountID: !Ref DataCollectionAccontID2
         MultiAccountRoleName: !Ref MultiAccountRoleName
         ResourcePrefix: !Ref ResourcePrefix
         IncludeTAModule: !Ref IncludeTAModule
@@ -201,8 +207,9 @@ Resources:
         IncludeRDSUtilizationModule: !Ref IncludeRDSUtilizationModule
         IncludeBudgetsModule: !Ref IncludeBudgetsModule
         IncludeTransitGatewayModule: !Ref IncludeTransitGatewayModule
-  DataCollectorOrgAccountModulesReadStackSet:
+  DataCollectorOrgAccountModulesReadStackSetDev:
     Type: AWS::CloudFormation::StackSet
+    Condition: OnlyDevDataCollectionAccountId
     Properties:
       Description: "StackSet in charge of deploying read roles across organization accounts"
       PermissionModel: SERVICE_MANAGED
@@ -218,6 +225,79 @@ Resources:
       Parameters:
         - ParameterKey: DevDataCollectionAccountID
           ParameterValue: !Ref DevDataCollectionAccountID
+        - ParameterKey: MultiAccountRoleName
+          ParameterValue: !Ref MultiAccountRoleName
+        - ParameterKey: ResourcePrefix
+          ParameterValue: !Ref ResourcePrefix
+        - ParameterKey: IncludeTAModule
+          ParameterValue: !Ref IncludeTAModule
+        - ParameterKey: IncludeInventoryCollectorModule
+          ParameterValue: !Ref IncludeInventoryCollectorModule
+        - ParameterKey: IncludeECSChargebackModule
+          ParameterValue: !Ref IncludeECSChargebackModule
+        - ParameterKey: IncludeRDSUtilizationModule
+          ParameterValue: !Ref IncludeRDSUtilizationModule
+        - ParameterKey: IncludeBudgetsModule
+          ParameterValue: !Ref IncludeBudgetsModule
+        - ParameterKey: IncludeTransitGatewayModule
+          ParameterValue: !Ref IncludeTransitGatewayModule
+      StackInstancesGroup:
+        - DeploymentTargets:
+            OrganizationalUnitIds: !Split [",", !Ref OrganizationalUnitIds]
+          Regions:
+            - !Ref "AWS::Region"
+      Capabilities:
+        - CAPABILITY_IAM
+        - CAPABILITY_NAMED_IAM
+      StackSetName: !Sub "StackSet-${AWS::AccountId}-OptimizationDataRole"
+      TemplateURL: !Sub "https://aws-managed-cost-intelligence-dashboards.s3.amazonaws.com/cfn/data-collection/deploy-in-linked-account-dev.yaml"
+  DataCollectorMgmtAccountReadStackPrd:
+    Type: AWS::CloudFormation::Stack
+    Condition: OnlyPrdDataCollectionAccountId
+    Properties:
+      TemplateURL: !Sub "https://aws-managed-cost-intelligence-dashboards.s3.amazonaws.com/cfn/data-collection/deploy-in-management-account-prd.yaml"
+      Parameters:
+        PrdDataCollectionAccountID: !Ref ProdDataCollectionAccontID
+        ManagementAccountRole: !Ref ManagementAccountRole
+        ResourcePrefix: !Ref ResourcePrefix
+        IncludeComputeOptimizerModule: !Ref IncludeComputeOptimizerModule
+        IncludeCostAnomalyModule: !Ref IncludeCostAnomalyModule
+        IncludeRightsizingModule: !Ref IncludeRightsizingModule
+        IncludeBackupModule: !Ref IncludeBackupModule
+        IncludeCostOptimizationHubModule: !Ref IncludeCostOptimizationHubModule
+  DataCollectorMgmtAccountModulesReadStackPrd:
+    Type: AWS::CloudFormation::Stack
+    Condition: !And 
+      - !Condition DeployModuleReadInMgmt
+      - !Condition OnlyPrdDataCollectionAccountId
+    Properties:
+      TemplateURL: !Sub "https://aws-managed-cost-intelligence-dashboards.s3.amazonaws.com/cfn/data-collection/deploy-in-linked-account-prd.yaml"
+      Parameters:
+        PrdDataCollectionAccountID: !Ref PrdDataCollectionAccountID
+        MultiAccountRoleName: !Ref MultiAccountRoleName
+        ResourcePrefix: !Ref ResourcePrefix
+        IncludeTAModule: !Ref IncludeTAModule
+        IncludeInventoryCollectorModule: !Ref IncludeInventoryCollectorModule
+        IncludeECSChargebackModule: !Ref IncludeECSChargebackModule
+        IncludeRDSUtilizationModule: !Ref IncludeRDSUtilizationModule
+        IncludeBudgetsModule: !Ref IncludeBudgetsModule
+        IncludeTransitGatewayModule: !Ref IncludeTransitGatewayModule
+  DataCollectorOrgAccountModulesReadStackSetPrd:
+    Type: AWS::CloudFormation::StackSet
+    Condition: OnlyPrdDataCollectionAccountId
+    Properties:
+      Description: "StackSet in charge of deploying read roles across organization accounts"
+      PermissionModel: SERVICE_MANAGED
+      AutoDeployment:
+        Enabled: true
+        RetainStacksOnAccountRemoval: false
+      ManagedExecution:
+        Active: true
+      OperationPreferences:
+        MaxConcurrentPercentage: 100
+        FailureTolerancePercentage: 100
+        RegionConcurrencyType: PARALLEL
+      Parameters:
         - ParameterKey: PrdDataCollectionAccountID
           ParameterValue: !Ref PrdDataCollectionAccountID
         - ParameterKey: MultiAccountRoleName
@@ -245,4 +325,4 @@ Resources:
         - CAPABILITY_IAM
         - CAPABILITY_NAMED_IAM
       StackSetName: !Sub "StackSet-${AWS::AccountId}-OptimizationDataRole"
-      TemplateURL: !Sub "https://aws-managed-cost-intelligence-dashboards.s3.amazonaws.com/cfn/data-collection/deploy-in-linked-account.yaml"
+      TemplateURL: !Sub "https://aws-managed-cost-intelligence-dashboards.s3.amazonaws.com/cfn/data-collection/deploy-in-linked-account-prd.yaml" 
