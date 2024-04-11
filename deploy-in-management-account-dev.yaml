@@ -22,9 +22,9 @@ Metadata:
       ManagementAccountRole:
         default: "Management account role"
       DevDataCollectionAccountID:
-        default: "Data Collection Account Id"
+        default: "DevDataCollectionAccountID"
       PrdDataCollectionAccountID:
-        default: "Data Collection Account Id"
+        default: "PrdDataCollectionAccountID"
       ResourcePrefix:
         default: "Role Prefix"
       IncludeComputeOptimizerModule:
@@ -113,7 +113,8 @@ Resources:
             Principal:
               AWS:
                 - !Sub "arn:aws:iam::${DevDataCollectionAccountID}:root"
-                - !If AccountIsProduction
+                - !If 
+                  - AccountIsProduction
                   - !Sub "arn:aws:iam::${PrdDataCollectionAccountID}:root"
                   - !Ref "AWS::NoValue"
             Condition:
@@ -126,6 +127,17 @@ Resources:
                     - !Sub "arn:aws:iam::${DevDataCollectionAccountID}:role/${ResourcePrefix}cost-explorer-rightsizing-LambdaRole"
                     - !Sub "arn:aws:iam::${DevDataCollectionAccountID}:role/${ResourcePrefix}cost-optimization-hub-LambdaRole"
                     - !Sub "arn:aws:iam::${DevDataCollectionAccountID}:role/${ResourcePrefix}backup-LambdaRole" 
+                    - !If 
+                      - AccountIsProduction
+                      -  - !Sub "arn:aws:iam::${DevDataCollectionAccountID}:role/${ResourcePrefix}account-collector-LambdaRole"
+                         - !Sub "arn:aws:iam::${DevDataCollectionAccountID}:role/${ResourcePrefix}organizations-LambdaRole"
+                         - !Sub "arn:aws:iam::${DevDataCollectionAccountID}:role/${ResourcePrefix}compute-optimizer-LambdaRole"
+                         - !Sub "arn:aws:iam::${DevDataCollectionAccountID}:role/${ResourcePrefix}cost-anomaly-LambdaRole"
+                         - !Sub "arn:aws:iam::${DevDataCollectionAccountID}:role/${ResourcePrefix}cost-explorer-rightsizing-LambdaRole"
+                         - !Sub "arn:aws:iam::${DevDataCollectionAccountID}:role/${ResourcePrefix}cost-optimization-hub-LambdaRole"
+                         - !Sub "arn:aws:iam::${DevDataCollectionAccountID}:role/${ResourcePrefix}backup-LambdaRole" 
+                      - !Ref "AWS::NoValue"
+                      
       Path: /
     Metadata:
       cfn_nag:
