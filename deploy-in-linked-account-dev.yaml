@@ -7,6 +7,7 @@ Metadata:
         default: 'Deployment parameters'
       Parameters:
         - DevDataCollectionAccountID
+        - ProdDataCollectionAccountID
         - ResourcePrefix
         - MultiAccountRoleName
     - Label:
@@ -20,6 +21,8 @@ Metadata:
         - IncludeTransitGatewayModule
     ParameterLabels:
       DevDataCollectionAccountID:
+        default: 'Data Collection Account ID'
+      PrdDataCollectionAccountID:
         default: 'Data Collection Account ID'
       MultiAccountRoleName:
         default: 'Multi Account Role Name'
@@ -38,7 +41,10 @@ Metadata:
       IncludeTransitGatewayModule:
         default: 'Include Transit Gateway Module'
 Parameters:
-  DevDevDataCollectionAccountID:
+  DevDataCollectionAccountID:
+    Type: String
+    Description: AccountId of where the collector is deployed
+  PrdDataCollectionAccountID:
     Type: String
     Description: AccountId of where the collector is deployed
   MultiAccountRoleName:
