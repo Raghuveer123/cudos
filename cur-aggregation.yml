@@ -9,7 +9,6 @@ Metadata:
           - DevDestinationAccountId
           - PrdDestinationAccountId
           - ResourcePrefix
-          - CreateCUR
       - 
         Label:
           default: "Destination Account specific parameters (fill only on Destination Account)"
