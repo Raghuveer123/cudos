@@ -41,17 +41,9 @@ Parameters:
     Default: "cid"
     Description: "Resource prefix. Will be used as a prefix for bucket and a name of a CUR"
     AllowedPattern: "^[a-z0-9]+[a-z0-9-]{1,61}[a-z0-9]+$"
-  CreateCUR:
-    Type: String
-    Description: Whether to create a local CUR in the destination account or not. Set this to False only if the current account is covered in the CUR of its Management (Payer) Account.
-    AllowedValues:
-      - "True"
-      - "False"
-    Default: "True"
   ##
   # Destination specific params
   ##
-
   SourceAccountIds:
     Type: String
     AllowedPattern: "^[0-9,]*$"
