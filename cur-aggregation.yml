@@ -15,12 +15,6 @@ Metadata:
           default: "Destination Account specific parameters (fill only on Destination Account)"
         Parameters:
           - SourceAccountIds
-      - 
-        Label:
-          default: "Determine Account types"
-        Parameters:
-          - DevSourceAccountType
-          - PrdSourceAccountType
 
     ParameterLabels:
       DevDestinationAccountId:
@@ -31,13 +25,6 @@ Metadata:
         default: "Prefix used for all named resources, including S3 Bucket"
       SourceAccountIds:
         default: "Source Account Ids"
-      DevSourceAccountType:
-        default: "Determine whether Dev Account type or not"
-      PrdSourceAccountType:
-        default: "Determine whether Prd Account type or not"
-
-
-
 Parameters:
 
   ##
@@ -62,18 +49,6 @@ Parameters:
       - "True"
       - "False"
     Default: "True"
-  DevSourceAccountType:
-    Type: String
-    Description: Whether account type is Dev or not.
-    AllowedValues:
-      - "True"
-      - "False"
-  PrdSourceAccountType:
-    Type: String
-    Description: Whether account type is Prd or not.
-    AllowedValues:
-      - "True"
-      - "False"
   ##
   # Destination specific params
   ##
@@ -87,22 +62,7 @@ Parameters:
 Conditions:
   IsDevDestinationAccount: !Equals [!Ref DevDestinationAccountId, !Ref AWS::AccountId]
   IsPrdDestinationAccount: !Equals [!Ref PrdDestinationAccountId, !Ref AWS::AccountId]
-  IsDevTypeSourceAccount: !Equals [!Ref DevSourceAccountType, "True"]
-  IsPrdTypeSourceAccount: !Equals [!Ref PrdSourceAccountType, "True"]
-  IsDevSourceAccount:  !And 
-    - !Not [!Condition IsDevDestinationAccount]
-    - !Conditon IsDevSourceAccount
-  IsPrdSourceAccount:  !And 
-    - !Not [!Condition IsPrdDestinationAccount]
-    - !Conditon IsPrdSourceAccount
   IsNorthVirginia: !Equals [!Ref AWS::Region, 'us-east-1']
-  CUREnable: !Equals [!Ref CreateCUR, 'True']
-  DeployCURViaCFNInDevSource: !And [!Condition CUREnable, !Condition IsDevSourceAccount, !Condition IsNorthVirginia]
-  DeployCURViaCFNInPrdSource: !And [!Condition CUREnable, !Condition IsPrdSourceAccount, !Condition IsNorthVirginia]
-  DeployCURViaCFNInDevDestination: !And [!Condition CUREnable, !Condition IsDevDestinationAccount, !Condition IsNorthVirginia]
-  DeployCURViaCFNInPrdDestination: !And [!Condition CUREnable, !Condition IsPrdDestinationAccount, !Condition IsNorthVirginia]
-  DeployCURViaLambda: !And [!Condition CUREnable, !Not [!Condition IsNorthVirginia]]
-  EmptySourceAccountIds: !Equals [ !Ref SourceAccountIds, '']
 
 Resources:
 
@@ -597,262 +557,6 @@ Resources:
                   - s3:GetObjectVersionTagging
                 Resource:
                   Fn::Sub: "arn:${AWS::Partition}:s3:::${ResourcePrefix}-${PrdDestinationAccountId}-shared/cur/${AWS::AccountId}/*"
-
-####
-# Local CUR 
-####
-
-  ## Deploy CUR nativly via CFN resource if we are in us-east-1
-  DevLocalCurInSource:
-    Type: AWS::CUR::ReportDefinition
-    Condition: DeployCURViaCFNInDevDestination
-    DependsOn:
-      - DevSourceS3BucketPolicy
-    Properties:
-      AdditionalArtifacts:
-        - ATHENA
-      AdditionalSchemaElements:
-        - RESOURCES
-      Compression: Parquet
-      Format: Parquet
-      RefreshClosedReports: True
-      ReportName: !Ref ResourcePrefix
-      ReportVersioning: OVERWRITE_REPORT
-      S3Bucket: !If [ IsDestinationAccount, !Ref DestinationS3, !Ref SourceS3 ]
-      S3Prefix: !Sub "cur/${AWS::AccountId}"
-      S3Region: !Ref AWS::Region
-      TimeUnit: HOURLY
-
-  DevLocalCurInDestination:
-    Type: AWS::CUR::ReportDefinition
-    Condition: DeployCURViaCFNInDevDestination
-    DependsOn:
-      - DevDestinationS3BucketPolicy # Conditional DependsOn is not supported, so we need 2 resources
-    Properties:
-      AdditionalArtifacts:
-        - ATHENA
-      AdditionalSchemaElements:
-        - RESOURCES
-      Compression: Parquet
-      Format: Parquet
-      RefreshClosedReports: True
-      ReportName: !Ref ResourcePrefix
-      ReportVersioning: OVERWRITE_REPORT
-      S3Bucket: !If [ IsDevDestinationAccount, !Ref DevDestinationS3, !Ref DevSourceS3 ]
-      S3Prefix: !Sub "cur/${AWS::AccountId}"
-      S3Region: !Ref AWS::Region
-      TimeUnit: HOURLY
-  
-  PrdLocalCurInSource:
-    Type: AWS::CUR::ReportDefinition
-    Condition: DeployCURViaCFNInPrdDestination
-    DependsOn:
-      - PrdSourceS3BucketPolicy
-    Properties:
-      AdditionalArtifacts:
-        - ATHENA
-      AdditionalSchemaElements:
-        - RESOURCES
-      Compression: Parquet
-      Format: Parquet
-      RefreshClosedReports: True
-      ReportName: !Ref ResourcePrefix
-      ReportVersioning: OVERWRITE_REPORT
-      S3Bucket: !If [ IsDestinationAccount, !Ref DestinationS3, !Ref SourceS3 ]
-      S3Prefix: !Sub "cur/${AWS::AccountId}"
-      S3Region: !Ref AWS::Region
-      TimeUnit: HOURLY
-
-  PrdLocalCurInDestination:
-    Type: AWS::CUR::ReportDefinition
-    Condition: DeployCURViaCFNInPrdDestination
-    DependsOn:
-      - PrdDestinationS3BucketPolicy # Conditional DependsOn is not supported, so we need 2 resources
-    Properties:
-      AdditionalArtifacts:
-        - ATHENA
-      AdditionalSchemaElements:
-        - RESOURCES
-      Compression: Parquet
-      Format: Parquet
-      RefreshClosedReports: True
-      ReportName: !Ref ResourcePrefix
-      ReportVersioning: OVERWRITE_REPORT
-      S3Bucket: !If [ IsPrdDestinationAccount, !Ref PrdDestinationS3, !Ref PrdSourceS3 ]
-      S3Prefix: !Sub "cur/${AWS::AccountId}"
-      S3Region: !Ref AWS::Region
-      TimeUnit: HOURLY
-
-
-  # Deploy CUR via lambda due to missing cfn resource definition
-  # AWS::CUR::ReportDefinition outside us-east-1
-  DevCURinUSEAST1:
-    Type: Custom::CURCreator
-    Condition: DeployCURViaLambda
-    Properties:
-      ServiceToken: !GetAtt CIDLambdaCURCreator.Arn
-      BucketPolicyWait: !If [ IsDevDestinationAccount, !Ref DevDestinationS3BucketPolicy, !Ref DevSourceS3BucketPolicy ]
-      ReportDefinition:
-        AdditionalArtifacts:
-          - ATHENA
-        AdditionalSchemaElements:
-          - RESOURCES
-        Compression: Parquet
-        Format: Parquet
-        RefreshClosedReports: True
-        ReportName: !Ref ResourcePrefix
-        ReportVersioning: OVERWRITE_REPORT
-        S3Bucket: !If [ IsDevDestinationAccount, !Ref DevDestinationS3, !Ref DevSourceS3 ]
-        S3Prefix: !Sub "cur/${AWS::AccountId}"
-        S3Region: !Ref AWS::Region
-        TimeUnit: HOURLY
-  
-  PrdCURinUSEAST1:
-    Type: Custom::CURCreator
-    Condition: DeployCURViaLambda
-    Properties:
-      ServiceToken: !GetAtt CIDLambdaCURCreator.Arn
-      BucketPolicyWait: !If [ IsPrdDestinationAccount, !Ref PrdDestinationS3BucketPolicy, !Ref PrdSourceS3BucketPolicy ]
-      ReportDefinition:
-        AdditionalArtifacts:
-          - ATHENA
-        AdditionalSchemaElements:
-          - RESOURCES
-        Compression: Parquet
-        Format: Parquet
-        RefreshClosedReports: True
-        ReportName: !Ref ResourcePrefix
-        ReportVersioning: OVERWRITE_REPORT
-        S3Bucket: !If [ IsPrdDestinationAccount, !Ref PrdDestinationS3, !Ref PrdSourceS3 ]
-        S3Prefix: !Sub "cur/${AWS::AccountId}"
-        S3Region: !Ref AWS::Region
-        TimeUnit: HOURLY
-###########################################################################
-# Lambda CUR Creator: used to create cur from outside us-east-1
-###########################################################################
-
-  CIDLambdaCURCreatorRole: #Execution role for the custom resource CIDLambdaAnalyticsExecutor
-    Type: AWS::IAM::Role
-    Condition: DeployCURViaLambda
-    Properties:
-      Path:
-        Fn::Sub: /${ResourcePrefix}/
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - lambda.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Policies:
-        - PolicyName: "ExecutionDefault"
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-            - Effect: Allow
-              Action:
-              - logs:CreateLogStream
-              - logs:PutLogEvents
-              - logs:CreateLogGroup
-              Resource:
-              - !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ResourcePrefix}-CID-CURCreator"
-              - !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ResourcePrefix}-CID-CURCreator:*"
-              - !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ResourcePrefix}-CID-CURCreator:*:*"
-        - PolicyName: "ExecutionSpecific"
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-            - Effect: Allow
-              Action:
-              - cur:PutReportDefinition
-              - cur:ModifyReportDefinition
-              - cur:DeleteReportDefinition
-              Resource:
-                - Fn::Sub: arn:${AWS::Partition}:cur:us-east-1:${AWS::AccountId}:definition/*
-
-  CIDLambdaCURCreator:
-    Type: AWS::Lambda::Function
-    Condition: DeployCURViaLambda
-    Properties:
-      Runtime: python3.9
-      FunctionName:
-        Fn::Sub: ${ResourcePrefix}-CID-CURCreator
-      Handler: index.lambda_handler
-      MemorySize: 128
-      Role:
-        Fn::GetAtt: CIDLambdaCURCreatorRole.Arn
-      Timeout: 15
-      Code:
-        ZipFile: |
-          import boto3
-          import cfnresponse
-          import uuid
-          import json
-
-          # Create a cur client in us-east-1 region
-          client = boto3.client('cur', region_name='us-east-1')
-
-          def lambda_handler(event, context):
-
-            print(json.dumps(event))
-            reason = ""
-
-            try:
-              report = event['ResourceProperties']['ReportDefinition']
-              report_name = event['ResourceProperties']['ReportDefinition']['ReportName']
-
-              refresh_closed_report = event['ResourceProperties']['ReportDefinition']["RefreshClosedReports"]
-              if refresh_closed_report in ["True", "true"]:
-                  report["RefreshClosedReports"] = True
-              elif refresh_closed_report in ["False", "false"]:
-                  report["RefreshClosedReports"] = False
-              else:
-                  raise Exception("RefreshClosedReports is not a boolean")
-
-              if event['RequestType'] == 'Create':
-                  res = client.put_report_definition(
-                      ReportDefinition=report
-                  )
-                  print(json.dumps(res))
-              elif event['RequestType'] == 'Update':
-                  old_report_name = event['OldResourceProperties']['ReportDefinition']['ReportName']
-                  if report["ReportName"] != old_report_name:
-                      res = client.put_report_definition(
-                          ReportDefinition=report
-                      )
-                      print(json.dumps(res))
-                  else:
-                      res = client.modify_report_definition(
-                          ReportName=old_report_name,
-                          ReportDefinition=report
-                      )
-                      print(json.dumps(res))
-              elif event['RequestType'] == 'Delete':
-                  try:
-                      res = client.delete_report_definition(
-                          ReportName=report_name
-                      )
-                      print(json.dumps(res))
-                  except:
-                      pass # Do not block deletion
-              else:
-                  raise Exception("Unknown operation: " + event['RequestType'])
-
-            except Exception as e:
-                reason = str(e)
-                print(e)
-            finally:
-                physicalResourceId = event.get('ResourceProperties',{}).get('ReportDefinition').get('ReportName', None) or str(uuid.uuid1())
-                if reason:
-                    print("FAILURE")
-                    cfnresponse.send(event, context, cfnresponse.FAILED, {"Data": reason }, physicalResourceId)
-                else:
-                    print("SUCCESS")
-                    cfnresponse.send(event, context, cfnresponse.SUCCESS, {}, physicalResourceId)
-
-
 ###########################################################################
 # Analytics: used by CID team to track adoption, by retrieving AWS AccountId
 ###########################################################################
@@ -988,13 +692,3 @@ Outputs:
     Description: Bucket where to store and aggregate CUR
     Value:
       Fn::Sub: ${ResourcePrefix}-${DestinationAccountId}-shared
-  LocalDevAccountBucket:
-    Condition: IsDevSourceAccount
-    Description: Local Bucket Name which replicate objects to centralized bucket
-    Value:
-      Fn::Sub: ${ResourcePrefix}-${AWS::AccountId}-local
-  LocalPrdAccountBucket:
-    Condition: IsPrdSourceAccount
-    Description: Local Bucket Name which replicate objects to centralized bucket
-    Value:
-      Fn::Sub: ${ResourcePrefix}-${AWS::AccountId}-local
