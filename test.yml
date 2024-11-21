@@ -1,0 +1,87 @@
+- name: Download certificate from Venafi and upload to Cohesity
+  hosts: localhost
+  gather_facts: no
+
+  vars:
+    venafi_url: "https://<venafi-api-url>"
+    venafi_user: "<your-username>"
+    venafi_password: "<your-password>"
+    cert_id: "<certificate-id>"  # Replace with the actual certificate ID
+    cohesity_url: "https://<cohesity-cluster-ip-or-hostname>"
+    cohesity_user: "<cohesity-username>"
+    cohesity_password: "<cohesity-password>"
+
+  tasks:
+    - name: Authenticate with Venafi
+      uri:
+        url: "{{ venafi_url }}/v1/authenticate"
+        method: POST
+        body_format: json
+        body:
+          username: "{{ venafi_user }}"
+          password: "{{ venafi_password }}"
+        headers:
+          Content-Type: "application/json"
+        return_content: yes
+      register: venafi_auth
+
+    - name: Extract Venafi authentication token
+      set_fact:
+        venafi_token: "{{ venafi_auth.json.accessToken }}"
+
+    - name: Fetch certificate and private key from Venafi
+      uri:
+        url: "{{ venafi_url }}/v1/certificates/{{ cert_id }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ venafi_token }}"
+          Content-Type: "application/json"
+        return_content: yes
+      register: venafi_cert
+
+    - name: Decode and extract certificate and private key
+      set_fact:
+        full_content: "{{ venafi_cert.json.content | b64decode }}"
+        cert_data: "{{ full_content | regex_search('-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----', multiline=True) }}"
+        key_data: "{{ full_content | regex_search('-----BEGIN PRIVATE KEY-----.*?-----END PRIVATE KEY-----', multiline=True) }}"
+
+    - name: Ensure both certificate and private key are found
+      fail:
+        msg: "Failed to extract certificate or private key from Venafi response."
+      when: cert_data is not defined or key_data is not defined
+
+    - name: Authenticate with Cohesity
+      uri:
+        url: "{{ cohesity_url }}/irisservices/api/v1/public/accessTokens"
+        method: POST
+        body_format: json
+        body:
+          domain: "LOCAL"  # Update if a different domain is used
+          username: "{{ cohesity_user }}"
+          password: "{{ cohesity_password }}"
+        headers:
+          Content-Type: "application/json"
+        return_content: yes
+      register: cohesity_auth
+
+    - name: Extract Cohesity authentication token
+      set_fact:
+        cohesity_token: "{{ cohesity_auth.json.accessToken }}"
+
+    - name: Upload certificate and private key to Cohesity
+      uri:
+        url: "{{ cohesity_url }}/irisservices/api/v1/public/certificates"
+        method: POST
+        body_format: json
+        body:
+          certificate: "{{ cert_data }}"
+          privateKey: "{{ key_data }}"
+        headers:
+          Authorization: "Bearer {{ cohesity_token }}"
+          Content-Type: "application/json"
+        status_code: 200
+      register: cohesity_response
+
+    - name: Debug the response from Cohesity
+      debug:
+        var: cohesity_response
